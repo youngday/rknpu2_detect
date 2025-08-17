@@ -31,12 +31,14 @@ struct Args {
     upload: bool,
 }
 
+use tracing_subscriber::fmt::format::FmtSpan;
+
 fn main() -> io::Result<()> {
     tracing_subscriber::fmt()
-        .compact()
-        // .with_timer(ChronoLocal::new(String::from("[%F %T]")))
-        .without_time()
-        .with_target(false)
+        .with_max_level(tracing::Level::INFO)
+        .with_span_events(FmtSpan::CLOSE)
+        .with_line_number(true)  // Add this line
+        .with_target(true)
         .init();
 
     let args = Args::parse();
