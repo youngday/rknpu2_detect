@@ -12,7 +12,7 @@ tokio = { version = "1", features = ["full"] }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 chrono = { version = "0.4", features = ["serde"] }
-ffmpeg-the-third = "3.0.2+ffmpeg-7.1"
+ffmpeg-the-third = "3.0.2"
 image = "0.25"
 libc = "0.2"
 toml = "0.9"
@@ -23,6 +23,6 @@ tracing-subscriber = { version = "0.3", features = [
     "chrono",
 ] }
 
-# [build-dependencies]
-# cc = "1.0"
-# bindgen = "0.65"
+[build-dependencies]
+cc = "1.2"
+bindgen = { version = "0.72", features = ["runtime"] }  # 添加 runtime 特性
