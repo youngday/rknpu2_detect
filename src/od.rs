@@ -1,18 +1,9 @@
 use std::{
-    collections::HashSet,
-    fs::File,
-    io::{self, Read, Result},
-    mem::size_of,
-    ptr::null_mut,
+    collections::HashSet, ffi::CStr, fs::File, io::{self, Read, Result}, mem::size_of, ptr::null_mut
 };
 
 use crate::{
-    _rknn_query_cmd_RKNN_QUERY_INPUT_ATTR, _rknn_query_cmd_RKNN_QUERY_IN_OUT_NUM,
-    _rknn_query_cmd_RKNN_QUERY_OUTPUT_ATTR, _rknn_tensor_format_RKNN_TENSOR_NCHW,
-    _rknn_tensor_format_RKNN_TENSOR_NHWC, _rknn_tensor_qnt_type_RKNN_TENSOR_QNT_AFFINE_ASYMMETRIC,
-    _rknn_tensor_type_RKNN_TENSOR_INT8, _rknn_tensor_type_RKNN_TENSOR_UINT8, dump_tensor_attr,
-    rknn_context, rknn_init, rknn_input, rknn_input_output_num, rknn_inputs_set, rknn_output,
-    rknn_outputs_get, rknn_outputs_release, rknn_query, rknn_run, rknn_tensor_attr,
+    _rknn_query_cmd_RKNN_QUERY_INPUT_ATTR, _rknn_query_cmd_RKNN_QUERY_IN_OUT_NUM, _rknn_query_cmd_RKNN_QUERY_OUTPUT_ATTR, _rknn_query_cmd_RKNN_QUERY_SDK_VERSION, _rknn_tensor_format_RKNN_TENSOR_NCHW, _rknn_tensor_format_RKNN_TENSOR_NHWC, _rknn_tensor_qnt_type_RKNN_TENSOR_QNT_AFFINE_ASYMMETRIC, _rknn_tensor_type_RKNN_TENSOR_INT8, _rknn_tensor_type_RKNN_TENSOR_UINT8, dump_tensor_attr, rknn_context, rknn_init, rknn_input, rknn_input_output_num, rknn_inputs_set, rknn_output, rknn_outputs_get, rknn_outputs_release, rknn_query, rknn_run, rknn_sdk_version, rknn_tensor_attr
 };
 use libc::c_void;
 use tracing::{error, info};
@@ -149,6 +140,8 @@ impl RknnAppContext {
     }
 
     pub fn init_model(&mut self, path: &str) -> Result<()> {
+
+     
         let mut ctx: rknn_context = 0;
 
         let mut model = File::open(path)?;
@@ -170,13 +163,40 @@ impl RknnAppContext {
             ));
         }
 
+               // Add SDK version tracing
+        info!("Querying SDK version...");
+        let mut sdk_version = rknn_sdk_version {
+            api_version: [0; 256],
+            drv_version: [0; 256],
+        };
+         let ret = unsafe {
+            rknn_query(
+                ctx,
+                _rknn_query_cmd_RKNN_QUERY_SDK_VERSION,
+                &mut sdk_version as *mut _ as *mut c_void,
+                size_of::<rknn_sdk_version>() as u32,
+            )
+        };
+        
+        if ret == 0 {
+            let api_ver = unsafe { CStr::from_ptr(sdk_version.api_version.as_ptr()) };
+            let drv_ver = unsafe { CStr::from_ptr(sdk_version.drv_version.as_ptr()) };
+            info!(
+                "RKNN SDK Version: {}, Driver Version: {}",
+                api_ver.to_str().unwrap_or("Invalid UTF-8"),
+                drv_ver.to_str().unwrap_or("Invalid UTF-8")
+            );
+        } else {
+            error!("Failed to query SDK version (error code: {})", ret);
+        }
+
         // Get Model Input Output Number
         let mut io_num = rknn_input_output_num {
             n_input: 0u32,
             n_output: 0u32,
         };
 
-        let ret = unsafe {
+        let ret: i32 = unsafe {
             rknn_query(
                 ctx,
                 _rknn_query_cmd_RKNN_QUERY_IN_OUT_NUM,
